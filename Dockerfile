@@ -1,4 +1,4 @@
-# Gunakan Node.js untuk tahap build
+# Gunakan Node.js sebagai base image
 FROM node:18 AS build
 
 # Set direktori kerja dalam container
@@ -10,23 +10,25 @@ COPY package.json package-lock.json ./
 # Instal dependensi
 RUN npm install
 
-# Salin seluruh kode proyek ke dalam container
+# Salin seluruh kode proyek
 COPY . .
 
 # Build aplikasi untuk produksi
 RUN npm run build
 
-# Gunakan Nginx untuk menyajikan aplikasi React
-FROM nginx:alpine
+# Gunakan Node.js sebagai server
+FROM node:18
 
-# Salin hasil build dari tahap sebelumnya ke dalam direktori Nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+# Set direktori kerja dalam container
+WORKDIR /app
 
-# Salin konfigurasi Nginx khusus untuk SPA
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Salin hasil build dan server.js
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./server.js
+COPY --from=build /app/node_modules ./node_modules
 
-# Ekspos port 80 agar bisa diakses dari luar container
-EXPOSE 80
+# Ekspos port 3000
+EXPOSE 3000
 
-# Jalankan Nginx saat container dimulai
-CMD ["nginx", "-g", "daemon off;"]
+# Jalankan server dengan Node.js
+CMD ["node", "server.js"]
